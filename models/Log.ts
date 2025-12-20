@@ -10,7 +10,7 @@ export interface ILog {
   ip?: string;
   user?: Record<string, any>;
   apiKeyId: mongoose.Types.ObjectId;
-  timestamp: string;
+  timestamp: Date;
 }
 
 const LogSchema = new Schema<ILog>(
@@ -50,8 +50,10 @@ const LogSchema = new Schema<ILog>(
       index: true,
     },
     timestamp: {
-      type: String,
+      type: Date,
       required: [true, "Log timestamp is required"],
+      index: true,
+      default: Date.now,
     },
   },
   {

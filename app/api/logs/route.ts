@@ -26,8 +26,24 @@ export async function GET(request: NextRequest) {
     const level = searchParams.get("level");
     const source = searchParams.get("source");
     const search = searchParams.get("search");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
-    const query: any = {};
+    const query: any = {
+      timestamp: {}
+    };
+
+    // Add date range filtering
+    if (startDate) {
+      query.timestamp.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.timestamp.$lte = new Date(endDate);
+    }
+    // If no date range is specified, remove the timestamp condition
+    if (Object.keys(query.timestamp).length === 0) {
+      delete query.timestamp;
+    }
 
     if (level) {
       query.level = level;
@@ -38,9 +54,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query.metadata = {
-        message: { $regex: search, $options: "i" },
-      };
+      query.$or = [
+        { 'metadata.message': { $regex: search, $options: 'i' } },
+        { event: { $regex: search, $options: 'i' } },
+        { source: { $regex: search, $options: 'i' } }
+      ];
     }
 
     const skip = (page - 1) * limit;
@@ -107,7 +125,7 @@ export async function POST(request: NextRequest) {
       apiKeyId: apiKeyAuth.apiKeyId,
       ip,
       userAgent,
-      timestamp,
+      timestamp: timestamp ? new Date(timestamp) : new Date(),
     });
 
     return createSuccessResponse(
