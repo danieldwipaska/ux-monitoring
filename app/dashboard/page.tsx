@@ -38,6 +38,46 @@ export default function DashboardPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
+
+  const deleteOldLogs = async (period: '2weeks' | '1month' | '3months') => {
+    try {
+      setIsDeleting(true);
+      setDeleteMessage(null);
+      
+      const response = await fetch('/api/logs', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ period }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete logs');
+      }
+
+      setDeleteMessage({
+        type: 'success',
+        message: `Successfully deleted ${data.deletedCount} logs older than ${period}`
+      });
+      
+      // Refresh the logs list
+      fetchLogs();
+    } catch (error) {
+      console.error('Error deleting logs:', error);
+      setDeleteMessage({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete logs'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const fetchLogs = async () => {
     try {
       setLoading(true);
@@ -109,10 +149,41 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Logs</h1>
-          <p className="text-gray-600 mt-1">Monitor your application logs in real-time</p>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">Logs</h1>
+          <div className="relative group">
+            <button 
+              className="flex items-center px-3 py-2 text-sm bg-red-50 text-red-600 rounded-md border border-red-200 hover:bg-red-100 disabled:opacity-50"
+              disabled={isDeleting}
+            >
+              Delete Old Logs
+              <ChevronDown className="ml-1 w-4 h-4" />
+            </button>
+            <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
+              <button 
+                onClick={() => deleteOldLogs('2weeks')}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                disabled={isDeleting}
+              >
+                Older than 2 weeks
+              </button>
+              <button 
+                onClick={() => deleteOldLogs('1month')}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                disabled={isDeleting}
+              >
+                Older than 1 month
+              </button>
+              <button 
+                onClick={() => deleteOldLogs('3months')}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                disabled={isDeleting}
+              >
+                Older than 3 months
+              </button>
+            </div>
+          </div>
         </div>
         <button
           onClick={fetchLogs}
@@ -131,17 +202,22 @@ export default function DashboardPage() {
               <Filter className="w-4 h-4 inline mr-1" />
               Level
             </label>
-            <select
-              value={filters.level}
-              onChange={(e) => handleFilterChange('level', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="">All Levels</option>
-              <option value="info">Info</option>
-              <option value="warn">Warning</option>
-              <option value="error">Error</option>
-              <option value="debug">Debug</option>
-            </select>
+            <div className="relative">
+              <select
+                value={filters.level}
+                onChange={(e) => handleFilterChange('level', e.target.value)}
+                className="w-full appearance-none bg-white border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              >
+                <option value="">All Levels</option>
+                <option value="info">Info</option>
+                <option value="warn">Warning</option>
+                <option value="error">Error</option>
+                <option value="debug">Debug</option>
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -214,6 +290,15 @@ export default function DashboardPage() {
       </div>
 
       {/* Error Message */}
+      {deleteMessage && (
+        <div className={`mb-4 p-3 rounded-md ${
+          deleteMessage.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          {deleteMessage.message}
+        </div>
+      )}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -282,7 +367,7 @@ export default function DashboardPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-end gap-4 mb-6">
           <button
             onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}

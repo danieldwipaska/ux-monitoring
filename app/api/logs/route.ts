@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { subDays, subMonths } from "date-fns";
 import connectDB from "@/lib/mongodb";
 import Log from "@/models/Log";
 import {
@@ -89,6 +90,54 @@ export async function GET(request: NextRequest) {
 }
 
 // POST create a new log (requires API key authentication)
+// DELETE logs older than specified period
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await authenticateUser(request);
+
+    if (!auth) {
+      return createErrorResponse("Unauthorized", 401);
+    }
+
+    const { period } = await request.json();
+    
+    if (!['2weeks', '1month', '3months'].includes(period)) {
+      return createErrorResponse("Invalid period specified", 400);
+    }
+
+    await connectDB();
+
+    let cutoffDate: Date;
+    const now = new Date();
+    
+    switch (period) {
+      case '2weeks':
+        cutoffDate = subDays(now, 14);
+        break;
+      case '1month':
+        cutoffDate = subMonths(now, 1);
+        break;
+      case '3months':
+        cutoffDate = subMonths(now, 3);
+        break;
+      default:
+        return createErrorResponse("Invalid period", 400);
+    }
+
+    const result = await Log.deleteMany({ 
+      timestamp: { $lt: cutoffDate }
+    });
+
+    return createSuccessResponse({
+      message: `Successfully deleted ${result.deletedCount} logs`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error("Error deleting logs:", error);
+    return createErrorResponse("Failed to delete logs", 500);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const apiKeyAuth = await authenticateApiKey(request);

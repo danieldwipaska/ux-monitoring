@@ -2,6 +2,46 @@ import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Log from '@/models/Log';
 import { authenticateUser, createErrorResponse, createSuccessResponse } from '@/lib/middleware';
+import { subDays, subMonths, format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
+
+async function getLogsByTimeRange(startDate: Date, endDate: Date, groupBy: 'day' | 'month', source?: string) {
+  const match: any = {
+    createdAt: { $gte: startDate, $lte: endDate },
+  };
+
+  if (source) {
+    match.source = source;
+  }
+
+  const formatString = groupBy === 'day' ? '%Y-%m-%d' : '%Y-%m';
+  const dateField = groupBy === 'day' ? 'date' : 'month';
+
+  return await Log.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: {
+          [dateField]: { $dateToString: { format: formatString, date: '$createdAt' } },
+          level: '$level',
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $group: {
+        _id: `$_id.${dateField}`,
+        date: { $first: `$_id.${dateField}` },
+        logs: {
+          $push: {
+            level: '$_id.level',
+            count: '$count',
+          },
+        },
+      },
+    },
+    { $sort: { date: 1 } },
+  ]);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,61 +54,31 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const hours = parseInt(searchParams.get('hours') || '24');
+    const source = searchParams.get('source') || undefined;
+    
+    // Get last 30 days data
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    const dailyLogs = await getLogsByTimeRange(thirtyDaysAgo, new Date(), 'day', source);
+    
+    // Get last 12 months data
+    const oneYearAgo = subMonths(new Date(), 12);
+    const monthlyLogs = await getLogsByTimeRange(oneYearAgo, new Date(), 'month', source);
 
-    const startDate = new Date();
-    startDate.setHours(startDate.getHours() - hours);
-
-    // Get stats by level
-    const levelStats = await Log.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      { $group: { _id: '$level', count: { $sum: 1 } } },
-    ]);
-
-    // Get stats by source
-    const sourceStats = await Log.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      { $group: { _id: '$source', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-
-    // Get total count
-    const totalLogs = await Log.countDocuments({ createdAt: { $gte: startDate } });
-
-    // Get logs over time (hourly)
-    const logsOverTime = await Log.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: {
-            $dateToString: {
-              format: '%Y-%m-%d %H:00',
-              date: '$createdAt',
-            },
-          },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    // Get available sources for filter
+    const sources = await Log.distinct('source');
 
     return createSuccessResponse({
-      totalLogs,
-      levelStats: levelStats.map((stat) => ({
-        level: stat._id,
-        count: stat.count,
-      })),
-      sourceStats: sourceStats.map((stat) => ({
-        source: stat._id,
-        count: stat.count,
-      })),
-      logsOverTime: logsOverTime.map((stat) => ({
-        time: stat._id,
-        count: stat.count,
-      })),
+      daily: dailyLogs,
+      monthly: monthlyLogs,
+      sources,
+      timeRange: {
+        daily: { start: thirtyDaysAgo, end: new Date() },
+        monthly: { start: oneYearAgo, end: new Date() },
+      },
     });
   } catch (error) {
+    console.error('Error fetching log stats:', error);
+    return createErrorResponse('Failed to fetch log stats', 500);
     console.error('Get log stats error:', error);
     return createErrorResponse('Internal server error', 500);
   }
