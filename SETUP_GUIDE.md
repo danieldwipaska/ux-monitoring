@@ -44,6 +44,7 @@ show dbs
 **Troubleshooting:**
 
 Jika MongoDB tidak bisa start:
+
 ```bash
 # Cek status
 brew services list
@@ -141,10 +142,25 @@ Aplikasi akan berjalan di [http://localhost:3000](http://localhost:3000)
 
 Test apakah API key bekerja dengan mengirim log:
 
+### 7. Test API dengan Postman atau cURL
+
+Test apakah API key bekerja dengan mengirim log. Proses ini sekarang membutuhkan 2 tahap:
+
+**Tahap 1: Dapatkan Access Token**
+
+```bash
+curl -X POST http://localhost:3000/api/auth/token \
+  -H "x-api-key: lm_your_api_key_here"
+```
+
+Anda akan mendapatkan `"accessToken": "eyJhb..."`
+
+**Tahap 2: Kirim Log menggunakan Token**
+
 ```bash
 curl -X POST http://localhost:3000/api/logs \
   -H "Content-Type: application/json" \
-  -H "x-api-key: lm_your_api_key_here" \
+  -H "Authorization: Bearer <accessToken_from_step_1>" \
   -d '{
     "level": "info",
     "message": "Test log from cURL",
@@ -207,11 +223,17 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/api/logs',
+        source: "/api/(logs|auth/token|auth/refresh)",
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: 'https://your-react-app.com' },
-          { key: 'Access-Control-Allow-Methods', value: 'POST, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, x-api-key' },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "https://your-react-app.com",
+          },
+          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, x-api-key, Authorization",
+          },
         ],
       },
     ];
@@ -239,6 +261,7 @@ Lihat `examples/INTEGRATION_GUIDE.md` untuk panduan lengkap.
 ### Error: "Cannot connect to MongoDB"
 
 **Solusi**:
+
 - Pastikan MongoDB berjalan: `brew services list` atau `sudo systemctl status mongod`
 - Cek `MONGODB_URI` di `.env.local` (harus `mongodb://localhost:27017/ux-monitoring`)
 - Test koneksi manual: `mongosh mongodb://localhost:27017`
@@ -248,6 +271,7 @@ Lihat `examples/INTEGRATION_GUIDE.md` untuk panduan lengkap.
 ### Error: "JWT_SECRET is not defined"
 
 **Solusi**:
+
 - Pastikan file `.env.local` ada di root directory
 - Pastikan `JWT_SECRET` sudah diisi
 - Restart development server setelah menambah environment variables
@@ -255,6 +279,7 @@ Lihat `examples/INTEGRATION_GUIDE.md` untuk panduan lengkap.
 ### Tidak bisa login setelah registrasi
 
 **Solusi**:
+
 - Clear browser cookies
 - Cek browser console untuk error
 - Pastikan MongoDB connection berhasil
@@ -263,6 +288,7 @@ Lihat `examples/INTEGRATION_GUIDE.md` untuk panduan lengkap.
 ### API Key tidak bekerja
 
 **Solusi**:
+
 - Pastikan API key di-copy dengan benar (termasuk prefix `lm_`)
 - Cek apakah API key masih active di dashboard
 - Pastikan header `x-api-key` dikirim dengan benar
@@ -271,6 +297,7 @@ Lihat `examples/INTEGRATION_GUIDE.md` untuk panduan lengkap.
 ### Logs tidak muncul di dashboard
 
 **Solusi**:
+
 - Cek apakah request berhasil dikirim (Network tab)
 - Pastikan API key valid
 - Refresh halaman dashboard
@@ -284,14 +311,15 @@ Aplikasi otomatis membuat indexes untuk performa optimal. Untuk melihat indexes:
 
 ```javascript
 // Di MongoDB shell atau Compass
-db.logs.getIndexes()
-db.apikeys.getIndexes()
-db.users.getIndexes()
+db.logs.getIndexes();
+db.apikeys.getIndexes();
+db.users.getIndexes();
 ```
 
 ### Rate Limiting
 
 Default rate limits:
+
 - **Login**: 5 requests per 15 menit per IP
 - **Logs**: 1000 requests per menit per API key
 - **General API**: 100 requests per menit per IP

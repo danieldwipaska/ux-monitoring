@@ -73,6 +73,7 @@ export default function ApiKeysPage() {
 
       setNewlyCreatedKey(data.apiKey);
       setNewKeyName('');
+      setShowCreateModal(false);
       fetchApiKeys();
     } catch (err: any) {
       setError(err.message);

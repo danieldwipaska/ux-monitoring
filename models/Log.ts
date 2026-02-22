@@ -10,6 +10,7 @@ export interface ILog {
   ip?: string;
   user?: Record<string, any>;
   apiKeyId: mongoose.Types.ObjectId;
+  ownerId: mongoose.Types.ObjectId;
   timestamp: Date;
 }
 
@@ -49,6 +50,12 @@ const LogSchema = new Schema<ILog>(
       required: true,
       index: true,
     },
+    ownerId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
     timestamp: {
       type: Date,
       required: [true, "Log timestamp is required"],
@@ -66,7 +73,11 @@ LogSchema.index({ createdAt: -1 });
 LogSchema.index({ level: 1, createdAt: -1 });
 LogSchema.index({ source: 1, createdAt: -1 });
 LogSchema.index({ event: 1, createdAt: -1 });
+LogSchema.index({ ownerId: 1, createdAt: -1 });
 
-const Log = models.Log || model<ILog>("Log", LogSchema);
+if (mongoose.models.Log) {
+  delete mongoose.models.Log;
+}
+const Log = model<ILog>("Log", LogSchema);
 
 export default Log;

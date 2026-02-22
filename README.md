@@ -52,6 +52,7 @@ NEXTAUTH_URL=http://localhost:3000
 ```
 
 **Generate JWT_SECRET:**
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
@@ -84,45 +85,63 @@ Create a logger utility:
 
 ```javascript
 // logger.js
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = 'http://localhost:3000/api/logs';
-const API_KEY = 'your-api-key-here'; // Replace with your actual API key
+const API_URL = "http://localhost:3000/api";
+const API_KEY = "your-api-key-here"; // Replace with your actual API key
+
+let accessToken = null;
+let tokenExpiresAt = 0;
+
+async function getAccessToken() {
+  if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
+
+  try {
+    const res = await axios.post(
+      `${API_URL}/auth/token`,
+      {},
+      {
+        headers: { "x-api-key": API_KEY },
+      },
+    );
+    accessToken = res.data.accessToken;
+    tokenExpiresAt = Date.now() + (res.data.expiresIn - 60) * 1000;
+    return accessToken;
+  } catch (err) {
+    console.error("Failed to get token");
+    return null;
+  }
+}
 
 export const logger = {
-  info: (message, metadata = {}) => {
-    sendLog('info', message, metadata);
-  },
-  warn: (message, metadata = {}) => {
-    sendLog('warn', message, metadata);
-  },
-  error: (message, metadata = {}) => {
-    sendLog('error', message, metadata);
-  },
-  debug: (message, metadata = {}) => {
-    sendLog('debug', message, metadata);
-  },
+  info: (message, metadata = {}) => sendLog("info", message, metadata),
+  warn: (message, metadata = {}) => sendLog("warn", message, metadata),
+  error: (message, metadata = {}) => sendLog("error", message, metadata),
+  debug: (message, metadata = {}) => sendLog("debug", message, metadata),
 };
 
 async function sendLog(level, message, metadata) {
   try {
+    const token = await getAccessToken();
+    if (!token) return;
+
     await axios.post(
-      API_URL,
+      `${API_URL}/logs`,
       {
         level,
         message,
-        source: 'my-react-app', // Change this to your app name
+        source: "my-react-app",
         metadata,
       },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
   } catch (error) {
-    console.error('Failed to send log:', error);
+    console.error("Failed to send log:", error);
   }
 }
 ```
@@ -130,18 +149,18 @@ async function sendLog(level, message, metadata) {
 Use the logger in your React components:
 
 ```javascript
-import { logger } from './logger';
+import { logger } from "./logger";
 
 function MyComponent() {
   const handleClick = () => {
-    logger.info('Button clicked', { buttonId: 'submit-btn' });
-    
+    logger.info("Button clicked", { buttonId: "submit-btn" });
+
     try {
       // Your code here
     } catch (error) {
-      logger.error('Error in MyComponent', { 
+      logger.error("Error in MyComponent", {
         error: error.message,
-        stack: error.stack 
+        stack: error.stack,
       });
     }
   };
@@ -155,6 +174,7 @@ function MyComponent() {
 ### Authentication
 
 #### Register
+
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -167,6 +187,7 @@ Content-Type: application/json
 ```
 
 #### Login
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
@@ -178,11 +199,13 @@ Content-Type: application/json
 ```
 
 #### Logout
+
 ```http
 POST /api/auth/logout
 ```
 
 #### Get Current User
+
 ```http
 GET /api/auth/me
 Cookie: auth-token=<jwt-token>
@@ -191,12 +214,14 @@ Cookie: auth-token=<jwt-token>
 ### API Keys
 
 #### Get All API Keys
+
 ```http
 GET /api/api-keys
 Cookie: auth-token=<jwt-token>
 ```
 
 #### Create API Key
+
 ```http
 POST /api/api-keys
 Cookie: auth-token=<jwt-token>
@@ -208,12 +233,14 @@ Content-Type: application/json
 ```
 
 #### Delete API Key
+
 ```http
 DELETE /api/api-keys/:id
 Cookie: auth-token=<jwt-token>
 ```
 
 #### Toggle API Key Status
+
 ```http
 PATCH /api/api-keys/:id
 Cookie: auth-token=<jwt-token>
@@ -224,12 +251,35 @@ Content-Type: application/json
 }
 ```
 
+### App Token Exchange
+
+#### Exchange API Key for JWT
+
+```http
+POST /api/auth/token
+x-api-key: <your-api-key>
+```
+
+Response will contain an `accessToken` and `refreshToken`.
+
+#### Refresh App Token
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "<your-refresh-token>"
+}
+```
+
 ### Logs
 
 #### Create Log (from your React app)
+
 ```http
 POST /api/logs
-x-api-key: <your-api-key>
+Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
@@ -244,12 +294,14 @@ Content-Type: application/json
 ```
 
 #### Get Logs (dashboard)
+
 ```http
 GET /api/logs?page=1&limit=50&level=error&source=my-app&search=query
 Cookie: auth-token=<jwt-token>
 ```
 
 #### Get Log Statistics
+
 ```http
 GET /api/logs/stats?hours=24
 Cookie: auth-token=<jwt-token>
@@ -271,8 +323,11 @@ The application includes built-in rate limiting:
 - Bcrypt password hashing with salt rounds of 12
 - Secure session management
 
-### API Key Security
+### Data Isolation & API Key Security
 
+- Logs queries and deletions are **strictly isolated** by user (`ownerId`). Users can only view or manage logs from their own API Keys.
+- Logs from different users or applications are never commingled globally.
+- Log Submissions require an App Access Token `Authorization: Bearer <token>`. You exchange an API Key for an Access / Refresh Token via `/api/auth/token`.
 - API keys are prefixed with `lm_` for easy identification
 - Keys are stored securely in MongoDB
 - Can be activated/deactivated without deletion
@@ -352,6 +407,7 @@ export const logRateLimiter = rateLimit({
 ## 📊 Dashboard Features
 
 ### Logs Page
+
 - Real-time log viewing with pagination
 - Filter by level (info, warn, error, debug)
 - Filter by source application
@@ -360,6 +416,7 @@ export const logRateLimiter = rateLimit({
 - Responsive table design
 
 ### Statistics Page
+
 - Total log count
 - Logs by level breakdown
 - Top 10 log sources
@@ -367,6 +424,7 @@ export const logRateLimiter = rateLimit({
 - Customizable time ranges (1h, 6h, 24h, 7d, 30d)
 
 ### API Keys Page
+
 - Create new API keys
 - View all API keys
 - Copy API keys to clipboard
@@ -386,6 +444,7 @@ export const logRateLimiter = rateLimit({
 ### Other Platforms
 
 The application can be deployed to any platform that supports Next.js:
+
 - Netlify
 - Railway
 - Render
@@ -394,6 +453,7 @@ The application can be deployed to any platform that supports Next.js:
 - Azure
 
 Make sure to:
+
 1. Set all environment variables
 2. Ensure MongoDB is accessible from your deployment
 3. Update `NEXTAUTH_URL` to your production URL
@@ -411,6 +471,7 @@ This project is open source and available under the MIT License.
 ### MongoDB Connection Issues
 
 If you can't connect to MongoDB:
+
 - Verify `MONGODB_URI` is correct (`mongodb://localhost:27017/ux-monitoring`)
 - Check if MongoDB is running: `brew services list` (macOS) or `sudo systemctl status mongod` (Linux)
 - Test connection manually: `mongosh mongodb://localhost:27017`
@@ -420,6 +481,7 @@ If you can't connect to MongoDB:
 ### Authentication Issues
 
 If login doesn't work:
+
 - Clear browser cookies
 - Verify `JWT_SECRET` is set
 - Check browser console for errors
@@ -427,6 +489,7 @@ If login doesn't work:
 ### Rate Limiting Issues
 
 If you're getting rate limited:
+
 - Adjust rate limits in `lib/rate-limiter.ts`
 - Clear the in-memory rate limit store (restart server)
 - Implement Redis for distributed rate limiting (production)

@@ -19,9 +19,9 @@ Copy `react-logger.js` to your React project (e.g., `src/utils/logger.js`)
 Open the logger file and update these constants:
 
 ```javascript
-const API_URL = 'https://your-monitoring-app.com/api/logs'; // Your production URL
-const API_KEY = 'lm_xxxxxxxxxxxxx'; // Your API key from the dashboard
-const APP_NAME = 'my-react-app'; // Your application name
+const API_URL = "https://your-monitoring-app.com/api/logs"; // Your production URL
+const API_KEY = "lm_xxxxxxxxxxxxx"; // Your API key from the dashboard
+const APP_NAME = "my-react-app"; // Your application name
 ```
 
 ### 4. Use the Logger
@@ -29,15 +29,15 @@ const APP_NAME = 'my-react-app'; // Your application name
 Import and use the logger in your components:
 
 ```javascript
-import { logger } from './utils/logger';
+import { logger } from "./utils/logger";
 
 function MyComponent() {
   useEffect(() => {
-    logger.info('Component mounted');
+    logger.info("Component mounted");
   }, []);
 
   const handleClick = () => {
-    logger.info('Button clicked', { buttonId: 'submit' });
+    logger.info("Button clicked", { buttonId: "submit" });
   };
 
   return <button onClick={handleClick}>Click me</button>;
@@ -51,13 +51,14 @@ function MyComponent() {
 Set up global error handling in your app's entry point (e.g., `index.js` or `App.js`):
 
 ```javascript
-import { setupGlobalErrorHandler } from './utils/logger';
+import { setupGlobalErrorHandler } from "./utils/logger";
 
 // Call this once when your app starts
 setupGlobalErrorHandler();
 ```
 
 This will automatically log:
+
 - Uncaught JavaScript errors
 - Unhandled promise rejections
 
@@ -66,7 +67,7 @@ This will automatically log:
 Wrap your app or specific components with the ErrorBoundary:
 
 ```javascript
-import { ErrorBoundary } from './utils/logger';
+import { ErrorBoundary } from "./utils/logger";
 
 function App() {
   return (
@@ -93,7 +94,7 @@ Use appropriate log levels:
 Always include relevant context in your logs:
 
 ```javascript
-logger.error('Payment failed', {
+logger.error("Payment failed", {
   userId: user.id,
   amount: payment.amount,
   paymentMethod: payment.method,
@@ -104,6 +105,7 @@ logger.error('Payment failed', {
 ### 3. Avoid Logging Sensitive Data
 
 Never log:
+
 - Passwords
 - Credit card numbers
 - Personal identification numbers
@@ -123,9 +125,10 @@ The logger sends requests asynchronously and won't block your UI. However, for h
 Use environment variables for configuration:
 
 ```javascript
-const API_URL = process.env.REACT_APP_LOGGER_URL || 'http://localhost:3000/api/logs';
+const API_URL =
+  process.env.REACT_APP_LOGGER_URL || "http://localhost:3000/api/logs";
 const API_KEY = process.env.REACT_APP_LOGGER_API_KEY;
-const APP_NAME = process.env.REACT_APP_NAME || 'my-app';
+const APP_NAME = process.env.REACT_APP_NAME || "my-app";
 ```
 
 Add to your `.env` file:
@@ -143,7 +146,7 @@ You can conditionally disable logging in development:
 ```javascript
 class Logger {
   constructor(apiUrl, apiKey, appName) {
-    this.enabled = process.env.NODE_ENV === 'production';
+    this.enabled = process.env.NODE_ENV === "production";
     // ... rest of constructor
   }
 
@@ -163,24 +166,30 @@ class Logger {
 
 ```javascript
 // Login
-logger.info('User login attempt', { email: user.email });
+logger.info("User login attempt", { email: user.email });
 
 // Success
-logger.info('User logged in successfully', { userId: user.id });
+logger.info("User logged in successfully", { userId: user.id });
 
 // Failure
-logger.warn('Login failed', { email: user.email, reason: 'invalid_credentials' });
+logger.warn("Login failed", {
+  email: user.email,
+  reason: "invalid_credentials",
+});
 ```
 
 ### 2. API Calls
 
 ```javascript
 try {
-  logger.debug('Fetching user data', { userId });
+  logger.debug("Fetching user data", { userId });
   const data = await fetchUser(userId);
-  logger.info('User data fetched', { userId, dataSize: JSON.stringify(data).length });
+  logger.info("User data fetched", {
+    userId,
+    dataSize: JSON.stringify(data).length,
+  });
 } catch (error) {
-  logger.error('Failed to fetch user data', {
+  logger.error("Failed to fetch user data", {
     userId,
     error: error.message,
     stack: error.stack,
@@ -192,14 +201,14 @@ try {
 
 ```javascript
 const handleSubmit = async (formData) => {
-  logger.info('Form submission started', { formType: 'contact' });
-  
+  logger.info("Form submission started", { formType: "contact" });
+
   try {
     await submitForm(formData);
-    logger.info('Form submitted successfully', { formType: 'contact' });
+    logger.info("Form submitted successfully", { formType: "contact" });
   } catch (error) {
-    logger.error('Form submission failed', {
-      formType: 'contact',
+    logger.error("Form submission failed", {
+      formType: "contact",
       error: error.message,
     });
   }
@@ -211,11 +220,11 @@ const handleSubmit = async (formData) => {
 ```javascript
 useEffect(() => {
   const startTime = performance.now();
-  
+
   loadData().then(() => {
     const duration = performance.now() - startTime;
-    logger.info('Page loaded', {
-      page: 'dashboard',
+    logger.info("Page loaded", {
+      page: "dashboard",
       loadTime: `${duration.toFixed(2)}ms`,
     });
   });
@@ -226,14 +235,14 @@ useEffect(() => {
 
 ```javascript
 const trackButtonClick = (buttonName) => {
-  logger.info('Button clicked', {
+  logger.info("Button clicked", {
     button: buttonName,
     page: window.location.pathname,
   });
 };
 
 const trackNavigation = (from, to) => {
-  logger.info('Navigation', {
+  logger.info("Navigation", {
     from,
     to,
     timestamp: new Date().toISOString(),
@@ -250,6 +259,7 @@ const trackNavigation = (from, to) => {
 3. **Check Network**: Open browser DevTools > Network tab to see if requests are being sent
 4. **Check CORS**: Ensure your monitoring app allows requests from your React app's domain
 5. **Check Rate Limits**: You might be hitting rate limits (1000 logs/minute per API key)
+6. **Check Access Token**: Ensure your integration code is successfully exchanging the API Key for a JWT Access Token.
 
 ### CORS Issues
 
@@ -260,11 +270,20 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        source: "/api/(logs|auth/token|auth/refresh)",
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: 'https://your-react-app.com' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, x-api-key' },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "https://your-react-app.com",
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,POST,PUT,DELETE,OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, x-api-key, Authorization",
+          },
         ],
       },
     ];
@@ -275,11 +294,13 @@ const nextConfig = {
 ### Performance Impact
 
 The logger is designed to have minimal performance impact:
+
 - Requests are sent asynchronously
 - Failed requests fail silently
 - No blocking operations
 
 If you notice performance issues:
+
 1. Reduce logging frequency
 2. Use debug level only in development
 3. Implement request batching
@@ -288,6 +309,7 @@ If you notice performance issues:
 ## Support
 
 For issues or questions:
+
 1. Check the main README.md
 2. Review the API documentation
 3. Check the troubleshooting section

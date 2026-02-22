@@ -4,7 +4,7 @@ import connectDB from "@/lib/mongodb";
 import Log from "@/models/Log";
 import {
   authenticateUser,
-  authenticateApiKey,
+  authenticateAppToken,
   createErrorResponse,
   createSuccessResponse,
 } from "@/lib/middleware";
@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     const query: any = {
-      timestamp: {}
+      timestamp: {},
+      ownerId: auth.userId,
     };
 
     // Add date range filtering
@@ -125,7 +126,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const result = await Log.deleteMany({ 
-      timestamp: { $lt: cutoffDate }
+      timestamp: { $lt: cutoffDate },
+      ownerId: auth.userId
     });
 
     return createSuccessResponse({
@@ -140,9 +142,9 @@ export async function DELETE(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKeyAuth = await authenticateApiKey(request);
-    if (!apiKeyAuth) {
-      return createErrorResponse("Invalid or missing API key", 401);
+    const appAuth = await authenticateAppToken(request);
+    if (!appAuth) {
+      return createErrorResponse("Unauthorized or invalid app token", 401);
     }
 
     const body = await request.json();
@@ -166,16 +168,20 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-real-ip");
     const userAgent = request.headers.get("user-agent");
 
-    const log = await Log.create({
+    const logData = {
       level,
       event,
       source,
       metadata,
-      apiKeyId: apiKeyAuth.apiKeyId,
-      ip,
-      userAgent,
+      apiKeyId: appAuth.apiKeyId,
+      ownerId: appAuth.ownerId,
+      ip: ip || undefined,
+      userAgent: userAgent || undefined,
       timestamp: timestamp ? new Date(timestamp) : new Date(),
-    });
+    };
+
+    const logs = await Log.create([logData]);
+    const log = logs[0];
 
     return createSuccessResponse(
       {

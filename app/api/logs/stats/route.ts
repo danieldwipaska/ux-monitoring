@@ -4,9 +4,10 @@ import Log from '@/models/Log';
 import { authenticateUser, createErrorResponse, createSuccessResponse } from '@/lib/middleware';
 import { subDays, subMonths, format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 
-async function getLogsByTimeRange(startDate: Date, endDate: Date, groupBy: 'day' | 'month', source?: string) {
+async function getLogsByTimeRange(startDate: Date, endDate: Date, groupBy: 'day' | 'month', ownerId: string, source?: string) {
   const match: any = {
     createdAt: { $gte: startDate, $lte: endDate },
+    ownerId: ownerId,
   };
 
   if (source) {
@@ -58,14 +59,14 @@ export async function GET(request: NextRequest) {
     
     // Get last 30 days data
     const thirtyDaysAgo = subDays(new Date(), 30);
-    const dailyLogs = await getLogsByTimeRange(thirtyDaysAgo, new Date(), 'day', source);
+    const dailyLogs = await getLogsByTimeRange(thirtyDaysAgo, new Date(), 'day', auth.userId, source);
     
     // Get last 12 months data
     const oneYearAgo = subMonths(new Date(), 12);
-    const monthlyLogs = await getLogsByTimeRange(oneYearAgo, new Date(), 'month', source);
+    const monthlyLogs = await getLogsByTimeRange(oneYearAgo, new Date(), 'month', auth.userId, source);
 
     // Get available sources for filter
-    const sources = await Log.distinct('source');
+    const sources = await Log.distinct('source', { ownerId: auth.userId });
 
     return createSuccessResponse({
       daily: dailyLogs,

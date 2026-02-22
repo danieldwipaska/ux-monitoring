@@ -26,8 +26,45 @@ class Logger {
     this.apiUrl = apiUrl;
     this.apiKey = apiKey;
     this.appName = appName;
+    this.accessToken = null;
+    this.tokenExpiresAt = 0;
     this.queue = [];
     this.isProcessing = false;
+  }
+
+  /**
+   * Exchange API Key for a short-lived App Access Token
+   * @private
+   */
+  async getAccessToken() {
+    // Return existing token if it is still valid (buffered by 1 minute)
+    if (this.accessToken && Date.now() < this.tokenExpiresAt) {
+      return this.accessToken;
+    }
+
+    try {
+      // Assuming apiUrl is ends with /api/logs, the token url will be /api/auth/token
+      const tokenUrl = this.apiUrl.replace('/logs', '/auth/token');
+      const response = await axios.post(
+        tokenUrl,
+        {},
+        {
+          headers: {
+            'x-api-key': this.apiKey,
+          },
+        }
+      );
+      
+      const { accessToken, expiresIn } = response.data;
+      this.accessToken = accessToken;
+      // Set expiration buffer
+      this.tokenExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+      
+      return this.accessToken;
+    } catch (error) {
+      console.error('Logger: Failed to acquire access token', error.message);
+      return null;
+    }
   }
 
   /**
@@ -36,6 +73,9 @@ class Logger {
    */
   async sendLog(level, message, metadata = {}) {
     try {
+      const token = await this.getAccessToken();
+      if (!token) return; // Cannot send log without token
+
       await axios.post(
         this.apiUrl,
         {
@@ -52,7 +92,7 @@ class Logger {
         {
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': this.apiKey,
+            'Authorization': `Bearer ${token}`,
           },
         }
       );

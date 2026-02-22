@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from './auth';
-import connectDB from './mongodb';
-import ApiKey from '@/models/ApiKey';
+import { verifyAppToken } from './app-auth';
 
 export async function authenticateUser(request: NextRequest): Promise<{ userId: string; email: string } | null> {
   const token = request.cookies.get('auth-token')?.value;
@@ -14,33 +13,24 @@ export async function authenticateUser(request: NextRequest): Promise<{ userId: 
   return payload;
 }
 
-export async function authenticateApiKey(request: NextRequest): Promise<{ apiKeyId: string; userId: string } | null> {
-  const apiKey = request.headers.get('x-api-key');
+export async function authenticateAppToken(request: NextRequest): Promise<{ apiKeyId: string; ownerId: string } | null> {
+  const authHeader = request.headers.get('authorization');
   
-  if (!apiKey) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
 
-  try {
-    await connectDB();
-    const apiKeyDoc = await ApiKey.findOne({ key: apiKey, isActive: true });
-    
-    if (!apiKeyDoc) {
-      return null;
-    }
-
-    // Update last used timestamp
-    apiKeyDoc.lastUsed = new Date();
-    await apiKeyDoc.save();
-
-    return {
-      apiKeyId: apiKeyDoc._id.toString(),
-      userId: apiKeyDoc.userId.toString(),
-    };
-  } catch (error) {
-    console.error('API Key authentication error:', error);
+  const token = authHeader.split(' ')[1];
+  const payload = verifyAppToken(token, 'access');
+  
+  if (!payload || !payload.apiKeyId || !payload.ownerId) {
     return null;
   }
+
+  return {
+    apiKeyId: payload.apiKeyId,
+    ownerId: payload.ownerId,
+  };
 }
 
 export function createErrorResponse(message: string, status: number) {

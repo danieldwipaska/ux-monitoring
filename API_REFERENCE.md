@@ -14,7 +14,9 @@ Production: https://your-domain.com
 Ada dua jenis authentication:
 
 1. **User Authentication**: Menggunakan JWT token dalam HTTP-only cookie (untuk dashboard)
-2. **API Key Authentication**: Menggunakan header `x-api-key` (untuk mengirim logs dari aplikasi)
+2. **API Key Authentication**: Menukar API Key dengan **App JWT Access Token** (untuk mengirim logs dari aplikasi client).
+
+_Catatan: Semua data logs terisolasi per user (strict data isolation by `ownerId`). Anda tidak dapat melihat logs milik user lain._
 
 ---
 
@@ -27,11 +29,13 @@ Membuat akun user baru.
 **Endpoint**: `POST /api/auth/register`
 
 **Headers**:
+
 ```
 Content-Type: application/json
 ```
 
 **Request Body**:
+
 ```json
 {
   "email": "user@example.com",
@@ -41,6 +45,7 @@ Content-Type: application/json
 ```
 
 **Response Success** (201):
+
 ```json
 {
   "message": "Registration successful",
@@ -53,6 +58,7 @@ Content-Type: application/json
 ```
 
 **Response Error** (400):
+
 ```json
 {
   "error": "User already exists"
@@ -68,11 +74,13 @@ Login dan mendapatkan JWT token.
 **Endpoint**: `POST /api/auth/login`
 
 **Headers**:
+
 ```
 Content-Type: application/json
 ```
 
 **Request Body**:
+
 ```json
 {
   "email": "user@example.com",
@@ -81,6 +89,7 @@ Content-Type: application/json
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "message": "Login successful",
@@ -93,6 +102,7 @@ Content-Type: application/json
 ```
 
 **Response Error** (401):
+
 ```json
 {
   "error": "Invalid credentials"
@@ -110,6 +120,7 @@ Logout dan hapus JWT token.
 **Endpoint**: `POST /api/auth/logout`
 
 **Response Success** (200):
+
 ```json
 {
   "message": "Logout successful"
@@ -125,11 +136,13 @@ Mendapatkan informasi user yang sedang login.
 **Endpoint**: `GET /api/auth/me`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "user": {
@@ -142,6 +155,7 @@ Cookie: auth-token=<jwt-token>
 ```
 
 **Response Error** (401):
+
 ```json
 {
   "error": "Unauthorized"
@@ -159,11 +173,13 @@ Mendapatkan semua API keys milik user.
 **Endpoint**: `GET /api/api-keys`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "apiKeys": [
@@ -189,12 +205,14 @@ Membuat API key baru.
 **Endpoint**: `POST /api/api-keys`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 Content-Type: application/json
 ```
 
 **Request Body**:
+
 ```json
 {
   "name": "My React App"
@@ -202,6 +220,7 @@ Content-Type: application/json
 ```
 
 **Response Success** (201):
+
 ```json
 {
   "message": "API key created successfully",
@@ -226,11 +245,13 @@ Menghapus API key.
 **Endpoint**: `DELETE /api/api-keys/:id`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "message": "API key deleted successfully"
@@ -238,6 +259,7 @@ Cookie: auth-token=<jwt-token>
 ```
 
 **Response Error** (404):
+
 ```json
 {
   "error": "API key not found"
@@ -253,12 +275,14 @@ Mengaktifkan atau menonaktifkan API key.
 **Endpoint**: `PATCH /api/api-keys/:id`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 Content-Type: application/json
 ```
 
 **Request Body**:
+
 ```json
 {
   "isActive": false
@@ -266,6 +290,7 @@ Content-Type: application/json
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "message": "API key updated successfully",
@@ -279,21 +304,82 @@ Content-Type: application/json
 
 ---
 
+## App Token Endpoints (For Client Apps)
+
+### Get Access Token
+
+Menukar API Key dengan JWT Access Token dan Refresh Token.
+
+**Endpoint**: `POST /api/auth/token`
+
+**Headers**:
+
+```
+x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+_Alternatif: Anda bisa mengirimkan API key dalam body JSON (`{ "apiKey": "..." }`)._
+
+**Response Success** (200):
+
+```json
+{
+  "accessToken": "eyJhbG...",
+  "refreshToken": "eyJhbG...",
+  "expiresIn": 900
+}
+```
+
+---
+
+### Refresh App Token
+
+Mendapatkan Access Token baru menggunakan Refresh Token.
+
+**Endpoint**: `POST /api/auth/refresh`
+
+**Headers**:
+
+```
+Content-Type: application/json
+```
+
+**Request Body**:
+
+```json
+{
+  "refreshToken": "eyJhbG..."
+}
+```
+
+**Response Success** (200):
+
+```json
+{
+  "accessToken": "eyJhbG...",
+  "expiresIn": 900
+}
+```
+
+---
+
 ## Logs Endpoints
 
 ### Create Log
 
-Mengirim log dari aplikasi (memerlukan API key).
+Mengirim log dari aplikasi (memerlukan App Access Token).
 
 **Endpoint**: `POST /api/logs`
 
 **Headers**:
+
 ```
 Content-Type: application/json
-x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Authorization: Bearer eyJhbG...
 ```
 
 **Request Body**:
+
 ```json
 {
   "level": "info",
@@ -309,6 +395,7 @@ x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Fields**:
+
 - `level` (required): `"info"` | `"warn"` | `"error"` | `"debug"`
 - `message` (required): String - Pesan log
 - `source` (required): String - Nama aplikasi sumber
@@ -316,6 +403,7 @@ x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - `userId` (optional): String - ID user terkait
 
 **Response Success** (201):
+
 ```json
 {
   "message": "Log created successfully",
@@ -324,6 +412,7 @@ x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Response Error** (401):
+
 ```json
 {
   "error": "Invalid or missing API key"
@@ -331,6 +420,7 @@ x-api-key: lm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Response Error** (429):
+
 ```json
 {
   "error": "Rate limit exceeded"
@@ -348,11 +438,13 @@ Mendapatkan logs dengan filtering dan pagination (untuk dashboard).
 **Endpoint**: `GET /api/logs`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 ```
 
 **Query Parameters**:
+
 - `page` (optional): Number - Halaman (default: 1)
 - `limit` (optional): Number - Jumlah per halaman (default: 50)
 - `level` (optional): String - Filter by level (`info`, `warn`, `error`, `debug`)
@@ -360,11 +452,13 @@ Cookie: auth-token=<jwt-token>
 - `search` (optional): String - Search dalam message
 
 **Example**:
+
 ```
 GET /api/logs?page=1&limit=50&level=error&source=my-app&search=failed
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "logs": [
@@ -403,19 +497,23 @@ Mendapatkan statistik logs.
 **Endpoint**: `GET /api/logs/stats`
 
 **Headers**:
+
 ```
 Cookie: auth-token=<jwt-token>
 ```
 
 **Query Parameters**:
+
 - `hours` (optional): Number - Rentang waktu dalam jam (default: 24)
 
 **Example**:
+
 ```
 GET /api/logs/stats?hours=24
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "totalLogs": 1500,
@@ -488,11 +586,11 @@ Semua error responses mengikuti format:
 
 ### Limits
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `/api/auth/login` | 5 requests | 15 minutes |
-| `/api/logs` (POST) | 1000 requests | 1 minute |
-| Other endpoints | 100 requests | 1 minute |
+| Endpoint           | Limit         | Window     |
+| ------------------ | ------------- | ---------- |
+| `/api/auth/login`  | 5 requests    | 15 minutes |
+| `/api/logs` (POST) | 1000 requests | 1 minute   |
+| Other endpoints    | 100 requests  | 1 minute   |
 
 ### Rate Limit Headers
 
@@ -512,11 +610,17 @@ Status code: `429 Too Many Requests`
 
 ### cURL Examples
 
-#### Create Log
+#### Exchange API Key & Create Log
+
 ```bash
+# 1. Get Token
+curl -X POST http://localhost:3000/api/auth/token \
+  -H "x-api-key: lm_your_api_key"
+
+# 2. Create Log
 curl -X POST http://localhost:3000/api/logs \
   -H "Content-Type: application/json" \
-  -H "x-api-key: lm_your_api_key" \
+  -H "Authorization: Bearer <accessToken_from_step_1>" \
   -d '{
     "level": "info",
     "message": "Test log",
@@ -526,6 +630,7 @@ curl -X POST http://localhost:3000/api/logs \
 ```
 
 #### Login
+
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
@@ -537,6 +642,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 ```
 
 #### Get Logs (with auth)
+
 ```bash
 curl -X GET "http://localhost:3000/api/logs?page=1&limit=10" \
   -b cookies.txt
@@ -545,37 +651,48 @@ curl -X GET "http://localhost:3000/api/logs?page=1&limit=10" \
 ### JavaScript/Axios Examples
 
 #### Create Log
-```javascript
-import axios from 'axios';
 
+```javascript
+import axios from "axios";
+
+// 1. Dapatkan token terlebih dahulu
+const tokenRes = await axios.post(
+  "http://localhost:3000/api/auth/token",
+  {},
+  { headers: { "x-api-key": "lm_your_api_key" } },
+);
+const accessToken = tokenRes.data.accessToken;
+
+// 2. Kirim Log
 const response = await axios.post(
-  'http://localhost:3000/api/logs',
+  "http://localhost:3000/api/logs",
   {
-    level: 'info',
-    message: 'User action',
-    source: 'my-app',
-    metadata: { userId: '123' }
+    level: "info",
+    message: "User action",
+    source: "my-app",
+    metadata: { userId: "123" },
   },
   {
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': 'lm_your_api_key'
-    }
-  }
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  },
 );
 ```
 
 #### Login
+
 ```javascript
 const response = await axios.post(
-  'http://localhost:3000/api/auth/login',
+  "http://localhost:3000/api/auth/login",
   {
-    email: 'user@example.com',
-    password: 'password123'
+    email: "user@example.com",
+    password: "password123",
   },
   {
-    withCredentials: true
-  }
+    withCredentials: true,
+  },
 );
 ```
 
@@ -583,7 +700,7 @@ const response = await axios.post(
 
 ## Best Practices
 
-1. **API Keys**: 
+1. **API Keys**:
    - Simpan API key dengan aman
    - Jangan commit API key ke Git
    - Gunakan environment variables
@@ -614,6 +731,7 @@ const response = await axios.post(
 ## Support
 
 Untuk pertanyaan atau masalah:
+
 - Baca dokumentasi lengkap di README.md
 - Check troubleshooting guide di SETUP_GUIDE.md
 - Buka issue di GitHub

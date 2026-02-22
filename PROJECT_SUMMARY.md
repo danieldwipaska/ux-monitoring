@@ -7,12 +7,14 @@ Aplikasi **UX Monitoring** adalah fullstack log management dashboard yang dibang
 ## ✅ Fitur yang Telah Diimplementasikan
 
 ### 1. ✅ Authentication & Authorization
+
 - **Login System**: JWT-based authentication dengan HTTP-only cookies
 - **Registration**: Sistem pendaftaran user baru
 - **Protected Routes**: Middleware untuk melindungi routes dashboard
 - **Session Management**: Auto-redirect berdasarkan status login
 
 ### 2. ✅ API Key Management
+
 - **Create API Keys**: Generate API keys dengan prefix `lm_`
 - **List API Keys**: Tampilkan semua API keys dengan detail
 - **Toggle Status**: Aktifkan/nonaktifkan API keys
@@ -20,8 +22,11 @@ Aplikasi **UX Monitoring** adalah fullstack log management dashboard yang dibang
 - **Last Used Tracking**: Track kapan terakhir API key digunakan
 - **Copy to Clipboard**: Fitur copy API key dengan satu klik
 
-### 3. ✅ Log Management
-- **Create Logs**: Endpoint untuk menerima logs dari aplikasi React
+### 3. ✅ Log Management (With Data Isolation)
+
+- **Log Data Isolation**: Filter logs per user ID (`ownerId`), you can only query / monitor logs from your apps.
+- **App JWT Authentication**: Applications exchange an API Key for an App Access Token `Authorization: Bearer <token>` to push logs.
+- **Create Logs**: Secure endpoint to collect application logs with metadata and App JWTs.
 - **View Logs**: Dashboard untuk melihat semua logs
 - **Filtering**: Filter berdasarkan level (info, warn, error, debug)
 - **Search**: Cari logs berdasarkan message
@@ -30,6 +35,7 @@ Aplikasi **UX Monitoring** adalah fullstack log management dashboard yang dibang
 - **Metadata Display**: Tampilkan metadata tambahan dalam format JSON
 
 ### 4. ✅ Statistics Dashboard
+
 - **Total Logs**: Jumlah total logs dalam periode tertentu
 - **Logs by Level**: Breakdown logs berdasarkan level
 - **Top Sources**: 10 aplikasi dengan logs terbanyak
@@ -37,12 +43,14 @@ Aplikasi **UX Monitoring** adalah fullstack log management dashboard yang dibang
 - **Time Range Filter**: Filter statistik berdasarkan waktu (1h, 6h, 24h, 7d, 30d)
 
 ### 5. ✅ Rate Limiting
+
 - **Authentication Rate Limit**: 5 requests per 15 menit untuk login
 - **Log Creation Rate Limit**: 1000 requests per menit per API key
 - **General API Rate Limit**: 100 requests per menit per IP
 - **In-Memory Store**: Rate limiter dengan automatic cleanup
 
 ### 6. ✅ Modern UI/UX
+
 - **Responsive Design**: Bekerja di desktop dan mobile
 - **Gradient Backgrounds**: Warna cerah dengan gradients
 - **Smooth Animations**: Transisi halus pada interaksi
@@ -102,6 +110,7 @@ ux-monitoring/
 ## 🗄️ Database Schema
 
 ### Users Collection
+
 ```typescript
 {
   _id: ObjectId,
@@ -114,6 +123,7 @@ ux-monitoring/
 ```
 
 ### API Keys Collection
+
 ```typescript
 {
   _id: ObjectId,
@@ -128,6 +138,7 @@ ux-monitoring/
 ```
 
 ### Logs Collection
+
 ```typescript
 {
   _id: ObjectId,
@@ -139,14 +150,17 @@ ux-monitoring/
   ip: string,
   userId: ObjectId (optional),
   apiKeyId: ObjectId (ref: ApiKey),
+  ownerId: ObjectId (ref: User),
   createdAt: Date
 }
 ```
 
 **Indexes**:
+
 - `logs.createdAt` (descending)
 - `logs.level + createdAt`
 - `logs.source + createdAt`
+- `logs.ownerId + createdAt`
 - `logs.apiKeyId`
 - `apikeys.key` (unique)
 - `users.email` (unique)
@@ -180,18 +194,21 @@ ux-monitoring/
 ## 🎨 UI Components & Pages
 
 ### Login Page (`/login`)
+
 - Toggle antara Login dan Register
 - Form validation
 - Error messages
 - Auto-redirect setelah login
 
 ### Dashboard Layout
+
 - Sticky navbar dengan navigation
 - Responsive design
 - Logout button
 - Active route highlighting
 
 ### Logs Page (`/dashboard`)
+
 - Real-time log viewing
 - Advanced filtering (level, source, search)
 - Pagination
@@ -200,6 +217,7 @@ ux-monitoring/
 - Refresh button
 
 ### API Keys Page (`/dashboard/api-keys`)
+
 - Create new API keys modal
 - List all API keys
 - Copy to clipboard functionality
@@ -209,6 +227,7 @@ ux-monitoring/
 - New key alert with copy button
 
 ### Statistics Page (`/dashboard/stats`)
+
 - Total logs card
 - Logs by level cards with progress bars
 - Top sources list with rankings
@@ -218,6 +237,7 @@ ux-monitoring/
 ## 📦 Dependencies
 
 ### Production Dependencies
+
 - `next@16.0.10` - React framework
 - `react@19.2.1` - UI library
 - `mongoose@latest` - MongoDB ODM
@@ -228,6 +248,7 @@ ux-monitoring/
 - `tailwindcss@4` - CSS framework
 
 ### Dev Dependencies
+
 - `typescript@5` - Type safety
 - `@types/node` - Node.js types
 - `@types/react` - React types
@@ -238,6 +259,7 @@ ux-monitoring/
 ## 🚀 Cara Menjalankan
 
 ### Development
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -250,6 +272,7 @@ npm run dev
 ```
 
 ### Production
+
 ```bash
 # 1. Build
 npm run build
@@ -331,8 +354,10 @@ Beberapa fitur yang bisa ditambahkan di masa depan:
 - [x] MongoDB connection dan models
 - [x] Authentication system (login, register, JWT)
 - [x] API key management (CRUD operations)
+- [x] App JWT generation from API Key and Refresh Tokens (`/api/auth/token`)
+- [x] Strict Data Isolation enforcing logs to only show per `ownerId`
 - [x] Rate limiting implementation
-- [x] Log creation endpoint dengan API key auth
+- [x] Log creation endpoint dengan App JWT auth
 - [x] Log viewing dengan filtering dan pagination
 - [x] Statistics dashboard dengan visualisasi
 - [x] Modern UI dengan TailwindCSS
@@ -352,7 +377,7 @@ Aplikasi UX Monitoring telah selesai dibangun dengan semua fitur yang diminta:
 ✅ **API Keys**: Management system dengan CRUD  
 ✅ **Rate Limiting**: Proteksi untuk semua endpoints  
 ✅ **Modern UI**: TailwindCSS dengan design yang elegan dan cerah  
-✅ **Documentation**: Lengkap dengan examples dan guides  
+✅ **Documentation**: Lengkap dengan examples dan guides
 
 Aplikasi siap digunakan untuk monitoring logs dari aplikasi React Anda!
 
