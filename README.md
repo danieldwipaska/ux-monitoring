@@ -460,11 +460,19 @@ Make sure to:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! We appreciate your help in making **UX Monitoring** better.
+Please feel free to submit a Pull Request. If you find a bug or have a feature request, please open an issue first to discuss it.
+
+## ☕ Support & Connect
+
+If you find this project helpful for your applications and want to support its ongoing development or just want to connect, feel free to reach out to me!
+
+- **Instagram**: [@nielnimation](https://www.instagram.com/nielnimation)
+- **LinkedIn**: [daniel-w-k](https://www.linkedin.com/in/daniel-w-k/)
 
 ## 📝 License
 
-This project is open source and available under the MIT License.
+This project is open-source and available under the [MIT License](LICENSE).
 
 ## 🐛 Troubleshooting
 
