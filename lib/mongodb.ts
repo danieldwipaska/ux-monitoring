@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+// Pre-import models to ensure they are registered
+import '@/models/User';
+import '@/models/ApiKey';
+import '@/models/Log';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 

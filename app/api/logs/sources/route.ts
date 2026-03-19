@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
     
-    const sources = await Log.distinct("source");
+    const sources = await Log.find({ ownerId: auth.userId }).distinct("source");
     
     return createSuccessResponse({
       sources: sources.filter(Boolean).sort() // Remove any empty strings and sort alphabetically

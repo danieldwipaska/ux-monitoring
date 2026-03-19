@@ -319,46 +319,67 @@ export default function DashboardPage() {
             <p className="text-gray-600">No logs found</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-100">
             {logs.map((log) => {
               const config = levelConfig[log.level];
               const Icon = config.icon;
               return (
-                <div key={log._id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-4">
-                    <div className={`${config.bg} ${config.border} border rounded-lg p-2 flex-shrink-0`}>
-                      <Icon className={`w-5 h-5 ${config.color}`} />
+                <details key={log._id} className="group border-b border-gray-50 last:border-0">
+                  <summary className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer list-none [&::-webkit-details-marker]:hidden transition-colors">
+                    <div className={`${config.bg} ${config.border} border rounded p-1 flex-shrink-0`}>
+                      <Icon className={`w-4 h-4 ${config.color}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div className="flex-1">
-                          <p className="text-gray-900 font-medium break-words">{log.event} - {log.metadata?.message}</p>
-                          <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <span className="font-medium">Source:</span> {log.source}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="font-medium">API Key:</span> {log.apiKeyId?.name || 'Unknown'}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-sm text-gray-500 whitespace-nowrap">
-                          {format(new Date(log.timestamp), 'MMM dd, HH:mm:ss')}
-                        </span>
+                    
+                    <span className="text-[11px] text-gray-500 whitespace-nowrap w-32 font-mono">
+                      {format(new Date(log.timestamp), 'MMM dd, HH:mm:ss')}
+                    </span>
+
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <p className="text-sm text-gray-900 truncate">
+                        <span className="font-semibold">{log.event}</span>
+                        {log.metadata?.message && (
+                          <span className="text-gray-500 ml-2 italic text-xs">- {log.metadata.message}</span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                      <span className="hidden md:inline whitespace-nowrap">
+                        {log.source}
+                      </span>
+                      <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                    </div>
+                  </summary>
+                  
+                  <div className="px-4 pb-4 pt-2 bg-gray-50 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-3 text-xs">
+                      <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span className="text-gray-500 font-medium">Source:</span>
+                        <span className="text-gray-900">{log.source}</span>
                       </div>
-                      {log.metadata && Object.keys(log.metadata).length > 0 && (
-                        <details className="mt-2">
-                          <summary className="text-sm text-blue-600 cursor-pointer hover:text-blue-700">
-                            View metadata
-                          </summary>
-                          <pre className="mt-2 p-3 bg-gray-50 rounded-lg text-xs overflow-x-auto">
-                            {JSON.stringify(log.metadata, null, 2)}
-                          </pre>
-                        </details>
-                      )}
+                      <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span className="text-gray-500 font-medium">API Key:</span>
+                        <span className="text-gray-900">{log.apiKeyId?.name || 'Unknown'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span className="text-gray-500 font-medium">Full Timestamp:</span>
+                        <span className="text-gray-900">{format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss.SSS')}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span className="text-gray-500 font-medium">Log ID:</span>
+                        <span className="text-gray-900 font-mono text-[10px]">{log._id}</span>
+                      </div>
                     </div>
+                    {log.metadata && Object.keys(log.metadata).length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Metadata</p>
+                        <pre className="p-3 bg-white border border-gray-200 rounded-lg text-[11px] overflow-x-auto font-mono text-gray-700 shadow-sm">
+                          {JSON.stringify(log.metadata, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </details>
               );
             })}
           </div>

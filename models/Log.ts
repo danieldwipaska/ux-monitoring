@@ -1,4 +1,6 @@
 import mongoose, { Schema, model, models } from "mongoose";
+import "./ApiKey";
+import "./User";
 
 export interface ILog {
   _id: string;
@@ -75,9 +77,6 @@ LogSchema.index({ source: 1, createdAt: -1 });
 LogSchema.index({ event: 1, createdAt: -1 });
 LogSchema.index({ ownerId: 1, createdAt: -1 });
 
-if (mongoose.models.Log) {
-  delete mongoose.models.Log;
-}
-const Log = model<ILog>("Log", LogSchema);
+const Log = models.Log || model<ILog>("Log", LogSchema);
 
 export default Log;
