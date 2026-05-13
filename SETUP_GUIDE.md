@@ -339,6 +339,160 @@ Sebelum deploy ke production:
 - [ ] Backup database secara berkala
 - [ ] Monitor rate limiting dan sesuaikan jika perlu
 
+## 🌐 Deployment ke Ubuntu VPS (Production)
+
+Menjalankan Next.js di luar Vercel sangat mungkin dan performanya sangat baik. Berikut adalah panduan langkah demi langkah untuk men-deploy aplikasi ini ke VPS Ubuntu dan menjalankannya sebagai background service menggunakan `systemctl`.
+
+### 1. Persiapan VPS
+
+Pastikan server Ubuntu Anda sudah terinstall Node.js (versi 18+) dan npm.
+
+```bash
+# Update sistem
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js (menggunakan NodeSource)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install git jika belum ada
+sudo apt install -y git
+```
+
+### 2. Clone Repository & Install Dependencies
+
+```bash
+# Pindah ke direktori /var/www (atau direktori pilihan Anda)
+sudo mkdir -p /var/www
+cd /var/www
+
+# Clone repository Anda (ganti URL_REPO_ANDA)
+sudo git clone <URL_REPO_ANDA> ux-monitoring
+cd ux-monitoring
+
+# Ubah ownership folder agar Anda bisa melakukan npm install
+sudo chown -R $USER:$USER /var/www/ux-monitoring
+
+# Install dependencies
+npm install
+```
+
+### 3. Setup Environment Variables
+
+Buat file `.env.local` untuk production:
+
+```bash
+nano .env.local
+```
+
+Isi dengan konfigurasi production Anda:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/ux-monitoring
+JWT_SECRET=your_super_secret_production_key_here
+NEXTAUTH_SECRET=another_super_secret_key
+NEXTAUTH_URL=https://domain-anda.com
+NODE_ENV=production
+```
+
+### 4. Build Aplikasi Next.js
+
+```bash
+npm run build
+```
+
+Perintah ini akan membuat folder `.next` yang berisi versi production aplikasi Anda yang sudah dioptimasi.
+
+### 5. Setup Systemd Service
+
+Untuk memastikan aplikasi terus berjalan dan otomatis restart jika server reboot, kita gunakan `systemctl`.
+
+Buat file service baru:
+
+```bash
+sudo nano /etc/systemd/system/ux-monitoring.service
+```
+
+Isi dengan konfigurasi berikut (sesuaikan `User` dengan username VPS Anda, misal: `ubuntu` atau `root`):
+
+```ini
+[Unit]
+Description=UX Monitoring Next.js App
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/var/www/ux-monitoring
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Penting:** Jika Anda menggunakan NVM untuk menginstall Node.js, path `/usr/bin/npm` mungkin berbeda. Cari tahu path npm Anda dengan menjalankan perintah `which npm` dan sesuaikan `ExecStart`.
+
+### 6. Jalankan Service
+
+```bash
+# Reload systemd untuk membaca file service yang baru
+sudo systemctl daemon-reload
+
+# Enable service agar otomatis jalan saat server restart
+sudo systemctl enable ux-monitoring
+
+# Jalankan service
+sudo systemctl start ux-monitoring
+
+# Cek status untuk memastikan aplikasi berjalan
+sudo systemctl status ux-monitoring
+```
+
+Aplikasi Next.js Anda sekarang berjalan di background pada port 3000 (default). 
+
+### 7. Setup Reverse Proxy dengan Nginx (Opsional tapi Direkomendasikan)
+
+Biasanya di production, Anda tidak mengakses port 3000 secara langsung, melainkan menggunakan Nginx untuk mem-forward traffic dari port 80 (HTTP) atau 443 (HTTPS) ke port 3000.
+
+```bash
+# Install Nginx
+sudo apt install -y nginx
+
+# Buat konfigurasi Nginx untuk web Anda
+sudo nano /etc/nginx/sites-available/ux-monitoring
+```
+
+Isi file:
+
+```nginx
+server {
+    listen 80;
+    server_name domain-anda.com www.domain-anda.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Enable konfigurasi Nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/ux-monitoring /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+Selesai! Aplikasi Next.js Anda sekarang berjalan stabil di VPS Ubuntu.
+
 ## 📚 Referensi
 
 - [Next.js Documentation](https://nextjs.org/docs)
