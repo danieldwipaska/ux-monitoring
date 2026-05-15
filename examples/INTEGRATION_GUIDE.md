@@ -78,6 +78,44 @@ function App() {
 }
 ```
 
+### Handling Token Expiration (Refresh Token)
+
+The access token obtained using the API Key expires in 15 minutes. To ensure uninterrupted logging, your logger implementation should handle `401 Unauthorized` errors by automatically fetching a new access token using the `refreshToken`.
+
+```javascript
+// Example of axios interceptor or fetch wrapper
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Assume you saved refreshToken securely
+        const refreshToken = localStorage.getItem("logger_refresh_token");
+        
+        const res = await axios.post("https://your-monitoring-app.com/api/auth/refresh", {
+          refreshToken
+        });
+        
+        const newAccessToken = res.data.accessToken;
+        // Update your stored access token
+        
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return axios(originalRequest); // Retry the failed log
+      } catch (refreshError) {
+        // Refresh token might be expired, need to use API Key again
+        console.error("Failed to refresh token", refreshError);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
 ## Best Practices
 
 ### 1. Log Levels

@@ -140,20 +140,16 @@ Aplikasi akan berjalan di [http://localhost:3000](http://localhost:3000)
 
 ### 7. Test API dengan Postman atau cURL
 
-Test apakah API key bekerja dengan mengirim log:
+Test apakah API key bekerja dengan mengirim log. Proses pengiriman log membutuhkan token authentication:
 
-### 7. Test API dengan Postman atau cURL
-
-Test apakah API key bekerja dengan mengirim log. Proses ini sekarang membutuhkan 2 tahap:
-
-**Tahap 1: Dapatkan Access Token**
+**Tahap 1: Dapatkan Access Token & Refresh Token**
 
 ```bash
 curl -X POST http://localhost:3000/api/auth/token \
   -H "x-api-key: lm_your_api_key_here"
 ```
 
-Anda akan mendapatkan `"accessToken": "eyJhb..."`
+Anda akan mendapatkan `"accessToken": "eyJhb..."` dan `"refreshToken": "eyJhb..."`
 
 **Tahap 2: Kirim Log menggunakan Token**
 
@@ -178,6 +174,18 @@ Jika berhasil, Anda akan melihat response:
   "message": "Log created successfully",
   "logId": "..."
 }
+```
+
+**Tahap 3: Dapatkan Access Token Baru (Jika Expired)**
+
+Access token hanya berlaku selama 15 menit. Anda dapat memperbaruinya menggunakan `refreshToken`:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refreshToken_from_step_1>"
+  }'
 ```
 
 ### 8. Lihat Logs di Dashboard

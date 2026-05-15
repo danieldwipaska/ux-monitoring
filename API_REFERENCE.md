@@ -610,12 +610,13 @@ Status code: `429 Too Many Requests`
 
 ### cURL Examples
 
-#### Exchange API Key & Create Log
+#### Exchange API Key, Create Log & Refresh Token
 
 ```bash
-# 1. Get Token
+# 1. Get Tokens
 curl -X POST http://localhost:3000/api/auth/token \
   -H "x-api-key: lm_your_api_key"
+# Response akan berisi accessToken dan refreshToken
 
 # 2. Create Log
 curl -X POST http://localhost:3000/api/logs \
@@ -626,6 +627,13 @@ curl -X POST http://localhost:3000/api/logs \
     "message": "Test log",
     "source": "test-app",
     "metadata": {"test": true}
+  }'
+
+# 3. Refresh Token (Jika accessToken expired)
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refreshToken_from_step_1>"
   }'
 ```
 
@@ -650,7 +658,7 @@ curl -X GET "http://localhost:3000/api/logs?page=1&limit=10" \
 
 ### JavaScript/Axios Examples
 
-#### Create Log
+#### Authentication Flow (Token & Refresh Token)
 
 ```javascript
 import axios from "axios";
@@ -659,26 +667,39 @@ import axios from "axios";
 const tokenRes = await axios.post(
   "http://localhost:3000/api/auth/token",
   {},
-  { headers: { "x-api-key": "lm_your_api_key" } },
+  { headers: { "x-api-key": "lm_your_api_key" } }
 );
-const accessToken = tokenRes.data.accessToken;
+let accessToken = tokenRes.data.accessToken;
+const refreshToken = tokenRes.data.refreshToken;
 
-// 2. Kirim Log
-const response = await axios.post(
-  "http://localhost:3000/api/logs",
-  {
-    level: "info",
-    message: "User action",
-    source: "my-app",
-    metadata: { userId: "123" },
-  },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+// 2. Kirim Log menggunakan accessToken
+try {
+  const response = await axios.post(
+    "http://localhost:3000/api/logs",
+    {
+      level: "info",
+      message: "User action",
+      source: "my-app"
     },
-  },
-);
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+} catch (error) {
+  // 3. Jika accessToken expired (401), gunakan refreshToken untuk mendapat accessToken baru
+  if (error.response?.status === 401) {
+    const refreshRes = await axios.post(
+      "http://localhost:3000/api/auth/refresh",
+      { refreshToken }
+    );
+    accessToken = refreshRes.data.accessToken;
+    
+    // Coba kirim ulang log dengan accessToken baru...
+  }
+}
 ```
 
 #### Login
