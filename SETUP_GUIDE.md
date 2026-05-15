@@ -465,20 +465,40 @@ sudo apt install -y nginx
 sudo nano /etc/nginx/sites-available/ux-monitoring
 ```
 
-Isi file:
+Isi file dengan konfigurasi yang dioptimalkan untuk Next.js (mirip dengan project Anda sebelumnya, namun disesuaikan untuk port 3000 dan Next.js):
 
 ```nginx
 server {
     listen 80;
-    server_name domain-anda.com www.domain-anda.com;
+    server_name monitoring.domain-anda.com; # Ganti dengan domain/subdomain Anda
 
+    # Log akses dan error spesifik untuk project ini
+    access_log /var/log/nginx/ux_monitoring_access.log;
+    error_log /var/log/nginx/ux_monitoring_error.log;
+
+    # Batasan upload (disesuaikan jika ada fitur upload file/gambar)
+    client_max_body_size 10M;
+
+    # Mengarahkan trafik utama ke aplikasi Next.js di port 3000
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
+
+        # Header penting untuk WebSocket (Next.js HMR/Fast Refresh jika dibutuhkan) dan IP asli
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Opsional: Mempercepat loading aset statis Next.js secara langsung
+    location /_next/static/ {
+        alias /var/www/ux-monitoring/.next/static/;
+        expires 365d;
+        access_log off;
     }
 }
 ```
@@ -487,11 +507,31 @@ Enable konfigurasi Nginx:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/ux-monitoring /etc/nginx/sites-enabled/
+# Pastikan tidak ada error syntax
 sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-Selesai! Aplikasi Next.js Anda sekarang berjalan stabil di VPS Ubuntu.
+### 8. Install SSL Gratis dengan Let's Encrypt (Certbot)
+
+Karena server Anda sepertinya sudah menggunakan Nginx dan memiliki sertifikat sebelumnya, kemungkinan besar `certbot` dan `python3-certbot-nginx` sudah terinstall. Jika belum, jalankan perintah ini:
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+Untuk memasang SSL (HTTPS) secara otomatis pada Nginx konfigurasi yang baru saja kita buat, cukup jalankan perintah berikut dan ikuti instruksinya:
+
+```bash
+# Ganti dengan domain/subdomain yang Anda tulis di `server_name` Nginx
+sudo certbot --nginx -d monitoring.domain-anda.com
+```
+
+Certbot akan menanyakan beberapa hal (seperti email) dan otomatis memodifikasi file Nginx `/etc/nginx/sites-available/ux-monitoring` Anda untuk menambahkan blok port 443 (HTTPS) dan sertifikat, persis seperti pada file referensi Express Anda.
+
+Pilih opsi **"Redirect"** (biasanya opsi 2) ketika ditanya apakah ingin me-redirect semua HTTP ke HTTPS.
+
+Selesai! Aplikasi Next.js Anda sekarang berjalan stabil dan aman dengan HTTPS di VPS Ubuntu.
 
 ## 📚 Referensi
 
