@@ -6,7 +6,9 @@
     "dev": "next dev -p 4000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx scripts/seed.ts",
+    "seed:clean": "tsx scripts/seed.ts --clean"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -28,9 +30,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.10.0",
+    "dotenv": "^17.4.2",
     "eslint": "^10.0.1",
     "eslint-config-next": "^0.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.22.1",
     "typescript": "^5"
   }
 }
