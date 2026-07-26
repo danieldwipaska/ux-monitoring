@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function TopProgressBar() {
@@ -8,17 +8,30 @@ export default function TopProgressBar() {
   const searchParams = useSearchParams();
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [opacity, setOpacity] = useState(1);
 
   // Reset/complete progress when path changes
   useEffect(() => {
+    // Only animate completion if bar was active or starting
+    setVisible(true);
+    setOpacity(1);
     setProgress(100);
-    const timer = setTimeout(() => {
-      setVisible(false);
-      setProgress(0);
+
+    // Allow width animation (300ms) to reach 100% full width before fading out
+    const fadeTimer = setTimeout(() => {
+      setOpacity(0);
     }, 300);
 
-    return () => clearTimeout(timer);
+    // Hide and reset progress after fade-out finishes (total 500ms)
+    const resetTimer = setTimeout(() => {
+      setVisible(false);
+      setProgress(0);
+    }, 550);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(resetTimer);
+    };
   }, [pathname, searchParams]);
 
   // Listen to anchor clicks to trigger progress immediately on navigation start
@@ -37,6 +50,7 @@ export default function TopProgressBar() {
         const currentUrl = window.location.pathname + window.location.search;
         if (href !== currentUrl) {
           setVisible(true);
+          setOpacity(1);
           setProgress(25);
           
           // Animate progress smoothly
@@ -63,7 +77,7 @@ export default function TopProgressBar() {
         className="h-full bg-blue-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(37,99,235,0.6)]"
         style={{
           width: `${progress}%`,
-          opacity: visible || progress > 0 ? 1 : 0,
+          opacity: opacity,
         }}
       />
     </div>
